@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Small, generic utilities — a tuft of feathers.",
   "scripts": {
-    "test": "node tests/js/test-rainbow-slice.js"
+    "test": "tools/run-tests.sh"
   },
   "license": "see LICENSE"
 }
