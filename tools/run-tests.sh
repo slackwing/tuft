@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Run every JS test under tests/js/. Each test file is a standalone Node
+# Run every test under tests/js/ and tests/ui/. Each test file is a standalone Node
 # script that exits non-zero on failure. We run them sequentially and
 # stop on the first failure (set -e).
 
@@ -9,7 +9,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 shopt -s nullglob
-files=(tests/js/test-*.js)
+files=(tests/js/test-*.js tests/ui/test-*.js)
 shopt -u nullglob
 
 if [ ${#files[@]} -eq 0 ]; then

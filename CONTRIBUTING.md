@@ -23,9 +23,35 @@ is real; the reward of a well-timed one is huge.
 4. **Reasonable name.** Descriptive enough to grep for; short enough to
    import.
 
+## What a new UI component needs (`lib/ui/<name>/`)
+
+The same "second use" rule applies. On top of it:
+
+1. **One folder, self-contained:** `<name>.js`, `<name>.css`, `README.md`
+   (settings reference + a copy-paste example). Consumers vendor the
+   folder; nothing outside it may be needed.
+2. **No dependencies, no build step, no network, no storage, no
+   framework.** Plain JS that runs from a `<script>` tag (exposing
+   `window.Tuft.<Name>`, nothing else global — wrap the file in an IIFE)
+   and from Node (`module.exports`) for tests.
+3. **Three layers, DOM in only one:** a pure *core* (settings + data →
+   view model), a pure *renderer* (view model → HTML string), and a thin
+   *mount* layer — the only code allowed to touch `document`/`window`
+   (measure, set `innerHTML`, observe resizes). Keep mount small; the pure
+   layers carry the logic and the tests.
+4. **Tests:** `tests/ui/test-<name>.js`, plain Node (no jsdom), covering
+   every setting and the scenarios that combine them. Assert on the view
+   model, and on the HTML string for the renderer.
+5. **CSS is namespaced** with a short component prefix (`.gos-…`) and
+   themed through CSS custom properties. No global selectors, no
+   `!important`.
+6. **Project words stay out.** Types, labels and colors come from the
+   consumer's settings ("daily", "writing" are not tuft's concern).
+
 ## What does NOT belong here
 
-- Anything that calls `document.*`, `window.*`, `fetch`, `require('fs')`.
+- In `lib/js/`: anything that calls `document.*`, `window.*`, `fetch`,
+  `require('fs')`. In `lib/ui/`: anything beyond the mount layer that does.
 - Anything that reads from the env or process state.
 - "Helpers" so abstract no consumer will recognize when to use them.
 - Things you'd naturally reach for in `lodash` or `date-fns`. (Don't
@@ -48,4 +74,5 @@ Major (0.1.0 → 1.0.0): breaking change to an existing utility.
 npm test
 ```
 
-Or just `node tests/js/test-<name>.js` for one file.
+Or just `node tests/js/test-<name>.js` / `node tests/ui/test-<name>.js`
+for one file.

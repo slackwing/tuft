@@ -1,22 +1,26 @@
 # tuft
 
 Small, generic utilities — like a tuft of down. Personal grab-bag, but
-disciplined: each utility here is general enough to be reused across
-projects with no dependencies, no DOM, no project-specific conventions.
+disciplined: everything here is general enough to be reused across
+projects, has no dependencies, and carries no project-specific vocabulary.
 
 ## Scope
 
-What belongs here:
-- Pure-function utilities operating on standard data types (arrays,
-  strings, numbers).
-- Algorithms small enough that copying them around projects would be
-  faster than depending on a heavyweight library, but big enough to be
-  worth not re-deriving.
+Two kinds of things live here, kept apart:
+
+- **`lib/js/` — pure functions** operating on standard data types (arrays,
+  strings, numbers). No DOM, network or filesystem. Algorithms small enough
+  that copying them around would be faster than a heavyweight library, but
+  big enough to be worth not re-deriving.
+- **`lib/ui/` — small UI components**, one self-contained folder each (JS +
+  CSS + README). The logic is still pure and Node-tested; only a thin
+  `mount` layer touches the DOM. See CONTRIBUTING.md for the rules.
 
 What does NOT belong here:
-- Anything that touches the DOM, network, filesystem.
+- Anything that talks to the network, filesystem or storage.
 - Anything tied to a specific project's vocabulary.
 - Anything you'd naturally pull from `lodash`, `date-fns`, etc.
+- Frameworks, build steps, or components big enough to want them.
 - "I might need this someday" — extract on the second use, not the first.
 
 ## Layout
@@ -24,9 +28,12 @@ What does NOT belong here:
 ```
 tuft/
 ├── lib/
-│   └── js/             # one file per utility; CJS exports
+│   ├── js/                   # pure functions — one file each; CJS exports
+│   └── ui/                   # UI components — one folder each
+│       └── <name>/           #   <name>.js, <name>.css, README.md
 ├── tests/
-│   └── js/             # one test file per utility
+│   ├── js/                   # test-<name>.js per function
+│   └── ui/                   # test-<name>.js per component
 └── package.json
 ```
 
@@ -39,9 +46,16 @@ later (e.g. `lib/go/`, `lib/rust/`) without restructuring.
   laying out a small set of categorical items where uniqueness matters
   more than order or duplication.
 
+### UI components
+
+- `grid-of-squares` — a contribution-style grid of days with typed,
+  ranked squares that bulldoze overflow into later days (skim or
+  proportional), per-date column heights, and a lookahead.
+
 ## Vendoring
 
-Consumers should vendor by copy from `lib/<lang>/`. There is no
+Consumers should vendor by copy: a function's file from `lib/<lang>/`, or
+a component's whole folder from `lib/ui/<name>/`. There is no
 published package; if you reach for one of these in a project that
 needs an npm dep, that's the signal to either publish this or rethink.
 
