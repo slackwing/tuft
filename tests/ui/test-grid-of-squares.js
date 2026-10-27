@@ -97,6 +97,11 @@ describe('settings', () => {
   throws(() => GOS.normalizeSettings({ schema: [A], cellSize: 0 }), /cellSize/, 'cellSize > 0');
   throws(() => GOS.normalizeSettings({ schema: [A], gap: -1 }), /gap/, 'gap ≥ 0');
   throws(() => GOS.normalizeSettings({ schema: [A], minColumns: 0 }), /minColumns/, 'minColumns ≥ 1');
+  eq([s.start, s.tooltip, s.schema[0].max], [null, 'counts', null], 'defaults: no start, tooltip with counts, no max');
+  throws(() => GOS.normalizeSettings({ schema: [A], start: '10/22' }), /bad date/, 'start is a date');
+  throws(() => GOS.normalizeSettings({ schema: [A], tooltip: 'labels' }), /tooltip must be 'counts', 'date' or 'none'/, 'unknown tooltip mode');
+  throws(() => GOS.normalizeSettings({ schema: [{ type: 'x', color: 'red', max: 0 }] }), /max must be a positive integer/, 'max ≥ 1');
+  throws(() => GOS.normalizeSettings({ schema: [{ type: 'x', color: 'red', max: 2.5 }] }), /max must be a positive integer/, 'max is whole');
 });
 
 describe('colors', () => {
@@ -275,6 +280,40 @@ describe('proportional bulldozing', () => {
   eq(lens(fits), [30, 0], 'nothing moves when the day fits');
 });
 
+// ---- start + per-type max ------------------------------------------------------
+
+describe('start date', () => {
+  const v = vm({ start: '2026-10-08', today: '2026-10-10', height: 3 },
+    [['2026-10-06', 'a', 2], ['2026-10-07', 'a', 9], ['2026-10-08', 'a', 1], ['2026-10-10', 'a', 2]], 5);
+  eq(lens(v), [0, 0, 1, 0, 2], 'squares before the start date don\'t exist — not shown, not bulldozed in');
+  eq(v.cols[0].date, '2026-10-06', '…though the columns before it are still drawn (empty)');
+  const onStart = vm({ start: '2026-10-08', today: '2026-10-09', height: 2 }, [['2026-10-08', 'a', 3]], 2);
+  eq(lens(onStart), [2, 1], 'squares on the start date count, and bulldoze as usual');
+});
+
+describe('max per type', () => {
+  const capped = [
+    { type: 'g', color: 'green', rank: 1, bulldoze: true, max: 6 },
+    { type: 'y', color: 'yellow', bulldoze: true, max: 3 },
+    { type: 'b', color: 'blue', rank: 2 },
+  ];
+  const v = vm({ schema: capped, height: 20, today: '2026-10-02' },
+    [['2026-10-01', 'g', 4], ['2026-10-01', 'y', 5], ['2026-10-01', 'g', 4], ['2026-10-01', 'b', 7]], 2);
+  eq(v.cols[0].counts, { b: 7, g: 6, y: 3 }, 'a type keeps at most `max` of a day\'s squares, across several adds');
+  eq(lens(v)[1], 0, 'the extra is as if it never existed — nothing bulldozes into the next day');
+  // height 4: day 1 keeps 4 of 6, carries 2. Day 2 still earns its full 6
+  // (carried squares aren't capped against), so 8 → 4 shown, 4 carried →
+  // day 3 shows 4. Were the carried 2 counted, day 2 would earn only 4 and
+  // day 3 would get 2.
+  const carried = vm({ schema: capped, height: 4, today: '2026-10-03' },
+    [['2026-10-01', 'g', 6], ['2026-10-02', 'g', 6]], 3);
+  eq(lens(carried), [4, 4, 4], 'the cap is pre-bulldozer: carried squares don\'t count against the next day\'s max');
+  eq(carriedOf(carried.cols[2]), 'cccc', '…day 3 is all carried squares');
+  const startAndMax = vm({ schema: capped, height: 20, today: '2026-10-03', start: '2026-10-02' },
+    [['2026-10-01', 'g', 9], ['2026-10-02', 'g', 9], ['2026-10-03', 'y', 1]], 3);
+  eq(lens(startAndMax), [0, 6, 1], 'start and max together');
+});
+
 // ---- render -----------------------------------------------------------------
 
 describe('render', () => {
@@ -306,6 +345,10 @@ describe('render', () => {
 
   const plain = GOS.renderHTML(v, Object.assign({}, settings, { legend: false, todayMarker: false }));
   ok(!plain.includes('gos-legend') && !plain.includes('gos-today'), 'legend and marker can be turned off');
+  const dateOnly = GOS.renderHTML(v, Object.assign({}, settings, { tooltip: 'date' }));
+  ok(dateOnly.includes('title="Oct 26"') && !dateOnly.includes('writing 1'), "tooltip: 'date' shows only the date");
+  const noTitle = GOS.renderHTML(v, Object.assign({}, settings, { tooltip: 'none' }));
+  ok(!noTitle.includes('title='), "tooltip: 'none' drops the tooltips");
   const sized = GOS.renderHTML(v, Object.assign({}, settings, { cellSize: 6, gap: 1, emptyColor: '#eee' }));
   ok(sized.includes('--gos-cell:6px;--gos-gap:1px;--gos-empty:#eee') && sized.includes('height:20px'), 'cellSize, gap and emptyColor reach the markup');
   const evil = GOS.normalizeSettings({ schema: [{ type: '"><x>', color: 'red' }], today: '2026-10-01' });

@@ -42,7 +42,7 @@ settings)`, `heightOn(settings, date)`, `resolveColor`, `PALETTE`,
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `schema` | required | `[{type, color, rank = 0, bulldoze = false, label = type}]` |
+| `schema` | required | `[{type, color, rank = 0, bulldoze = false, max, label = type}]` — `max`: at most this many of the type's squares per day, before bulldozing (the extra never exists) |
 | `height` | `10` | Column height, in squares |
 | `heightChanges` | `[]` | `[{from: 'YYYY-MM-DD', height}]` — from that date on, columns are that tall. The grid grows from the bottom: columns share a baseline |
 | `bulldozeMode` | `'skim'` | How overflow leaves a column — below |
@@ -50,9 +50,11 @@ settings)`, `heightOn(settings, date)`, `resolveColor`, `PALETTE`,
 | `cellSize`, `gap` | `10`, `2` | Pixels |
 | `minColumns` | `10` | Fewest columns, however narrow the container |
 | `today` | viewer's local date | `'YYYY-MM-DD'` |
+| `start` | `null` | `'YYYY-MM-DD'` — squares dated before it don't exist (not shown, not bulldozed in) |
 | `emptyColor` | `'empty'` | Background squares |
 | `todayMarker` | `true` | A triangle + "TODAY" under today's column |
 | `legend` | `false` | A swatch + label per type, in rank order |
+| `tooltip` | `'counts'` | Each column's `title`: `'counts'` (date + counts per type), `'date'`, or `'none'` |
 
 **Colors** are palette words — `green yellow orange red pink purple blue
 brown gray black white empty` — or `#rgb`, `#rrggbb`, `rgb()`, `rgba()`.
@@ -82,6 +84,6 @@ Everything is under `.gos`. Override the custom properties to theme it:
 `--gos-cell`, `--gos-gap`, `--gos-radius`, `--gos-empty`,
 `--gos-light-edge`, `--gos-ink`, `--gos-muted`. Hooks: `.gos-col.is-today`,
 `.is-future`, `.gos-cell.is-lit`, `.is-carried`, `.is-light`,
-`[data-type="…"]`. Each column's `title` lists its counts.
+`[data-type="…"]`. Each column's `title` follows the `tooltip` setting.
 
 Tests: `node tests/ui/test-grid-of-squares.js`.

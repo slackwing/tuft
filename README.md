@@ -49,8 +49,9 @@ later (e.g. `lib/go/`, `lib/rust/`) without restructuring.
 ### UI components
 
 - `grid-of-squares` — a contribution-style grid of days with typed,
-  ranked squares that bulldoze overflow into later days (skim or
-  proportional), per-date column heights, and a lookahead.
+  ranked squares (optionally capped per day) that bulldoze overflow into
+  later days (skim or proportional), per-date column heights, a start
+  date, and a lookahead.
 
 ## Vendoring
 
