@@ -51,7 +51,8 @@ later (e.g. `lib/go/`, `lib/rust/`) without restructuring.
 - `grid-of-squares` — a contribution-style grid of days with typed,
   ranked squares (optionally capped per day) that bulldoze overflow into
   later days (skim or proportional), per-date column heights, a start
-  date, and a lookahead.
+  date, a lookahead, and holidays (rainbow squares topping chosen days
+  up to a share of their height).
 
 ## Vendoring
 

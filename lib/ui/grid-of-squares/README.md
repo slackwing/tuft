@@ -4,6 +4,7 @@ A GitHub-contribution-style grid: one column per day, squares stacked
 bottom-up, today about 80% of the way across, as many columns as fit the
 container. Squares have **types** (color, rank, whether they bulldoze);
 what doesn't fit a day's column is hidden or shoved into the next day.
+**Holidays** top chosen days up with rainbow squares.
 
 ```html
 <link rel="stylesheet" href="grid-of-squares.css">
@@ -55,6 +56,7 @@ settings)`, `heightOn(settings, date)`, `resolveColor`, `PALETTE`,
 | `todayMarker` | `true` | A triangle + "TODAY" under today's column |
 | `legend` | `false` | A swatch + label per type, in rank order |
 | `tooltip` | `'counts'` | Each column's `title`: `'counts'` (date + counts per type), `'date'`, or `'none'` |
+| `holidays` | `[]` | `[{date, fill = 1}]` or `[{from, to, fill = 1}]` (inclusive) — below |
 
 **Colors** are palette words — `green yellow orange red pink purple blue
 brown gray black white empty` — or `#rgb`, `#rrggbb`, `rgb()`, `rgba()`.
@@ -78,12 +80,30 @@ Overflow cascades day by day, through history left of the window and into
 the future. Days before the window are simulated, so a big day long ago can
 still spill into view.
 
+**Holidays** forgive a day. With `fill` (0 < fill ≤ 1), the day counts as
+filled up to `round(fill × its height)` squares: whatever its real squares
+(its own and any bulldozed in) don't reach, holiday squares make up — each
+one a rainbow, stacked on top of the real ones. A day that earns its share
+anyway gets none. Holiday squares are drawn after the overflow simulation:
+they never push real squares out, never carry into the next day, and don't
+appear in `counts` (a column's `holiday` has their number). Upcoming
+holidays show ahead of today; days before `start` get none.
+
+```js
+holidays: [
+  { date: '2026-10-31' },                              // 100%
+  { date: '2026-11-01', fill: 0.5 },                   // half the height
+  { from: '2026-11-03', to: '2026-11-08', fill: 1 },   // a week away
+]
+```
+
 ## Styling
 
 Everything is under `.gos`. Override the custom properties to theme it:
 `--gos-cell`, `--gos-gap`, `--gos-radius`, `--gos-empty`,
-`--gos-light-edge`, `--gos-ink`, `--gos-muted`. Hooks: `.gos-col.is-today`,
-`.is-future`, `.gos-cell.is-lit`, `.is-carried`, `.is-light`,
+`--gos-light-edge`, `--gos-ink`, `--gos-muted`, `--gos-holiday` (any CSS
+background; a spectrum gradient by default). Hooks: `.gos-col.is-today`,
+`.is-future`, `.gos-cell.is-lit`, `.is-carried`, `.is-light`, `.is-holiday`,
 `[data-type="…"]`. Each column's `title` follows the `tooltip` setting.
 
 Tests: `node tests/ui/test-grid-of-squares.js`.

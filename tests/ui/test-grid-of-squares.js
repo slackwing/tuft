@@ -314,6 +314,67 @@ describe('max per type', () => {
   eq(lens(startAndMax), [0, 6, 1], 'start and max together');
 });
 
+// ---- holidays ---------------------------------------------------------------------
+
+/** Bottom → top, with holiday squares as '*'. */
+const withHolidays = (col) => col.cells.map((c) => (c.holiday ? '*' : c.type)).join('');
+
+describe('holidays', () => {
+  const v = vm({ height: 10, holidays: [{ date: '2026-10-09', fill: 1 }, { date: '2026-10-10', fill: 0.5 }] },
+    [['2026-10-09', 'a', 3], ['2026-10-10', 'a', 2]], 3);
+  eq(withHolidays(v.cols[1]), 'aaa*******', 'a 100% holiday fills the column: real squares first, holiday squares on top');
+  eq(withHolidays(v.cols[2]), 'aa***', 'a 50% holiday fills to half the height, real squares counting toward it');
+  eq(withHolidays(v.cols[0]), '', 'other days are untouched');
+  eq(v.cols[1].counts, { a: 3 }, 'counts are real squares only…');
+  eq([v.cols[0].holiday, v.cols[1].holiday, v.cols[2].holiday], [0, 7, 3], '…the holiday squares are counted apart');
+
+  const busy = vm({ height: 10, holidays: [{ date: '2026-10-10', fill: 0.5 }] }, [['2026-10-10', 'a', 7]], 1);
+  eq(withHolidays(busy.cols[0]), 'aaaaaaa', 'real squares past the holiday\'s share: no holiday squares, nothing hidden');
+
+  // height 4: day 1 earns 6, keeps 4, carries 2 into day 2 (a holiday) —
+  // the carried squares are real there; the holiday fills the rest and
+  // pushes nothing on.
+  const carried = vm({ height: 4, today: '2026-10-03', holidays: [{ date: '2026-10-02', fill: 1 }] },
+    [['2026-10-01', 'a', 6]], 3);
+  eq(carried.cols.map(withHolidays), ['aaaa', 'aa**', ''], 'squares bulldozed into a holiday count as real; holiday squares never bulldoze');
+  const over = vm({ height: 4, today: '2026-10-03', holidays: [{ date: '2026-10-02', fill: 1 }] },
+    [['2026-10-01', 'a', 6], ['2026-10-02', 'a', 3]], 3);
+  eq(over.cols.map(withHolidays), ['aaaa', 'aaaa', 'a'], 'a holiday doesn\'t change how real squares overflow');
+
+  const tall = vm({ height: 10, heightChanges: [{ from: '2026-10-10', height: 6 }], holidays: [{ date: '2026-10-09', fill: 0.5 }, { date: '2026-10-10', fill: 0.5 }] }, [], 2);
+  eq([tall.cols[0].holiday, tall.cols[1].holiday], [5, 3], 'the share is of that day\'s height');
+  eq(vm({ height: 5, holidays: [{ date: '2026-10-10', fill: 0.5 }] }, [], 1).cols[0].holiday, 3, 'half of an odd height rounds up');
+
+  const range = vm({ height: 3, holidays: [{ from: '2026-10-08', to: '2026-10-09' }, { date: '2026-10-10', fill: 0.34 }] }, [], 4);
+  eq(range.cols.map((c) => c.holiday), [0, 3, 3, 1], '{from, to} covers each day in between; fill defaults to 1');
+  const early = vm({ height: 3, start: '2026-10-09', holidays: [{ from: '2026-10-08', to: '2026-10-09' }] }, [], 3);
+  eq(early.cols.map((c) => c.holiday), [0, 3, 0], 'no holiday squares before the start date');
+  const ahead = vm({ height: 2, lookahead: 0.5, holidays: [{ date: '2026-10-11', fill: 1 }] }, [], 4);
+  eq(ahead.cols.map((c) => [c.date, c.isFuture, c.holiday]),
+    [['2026-10-09', false, 0], ['2026-10-10', false, 0], ['2026-10-11', true, 2], ['2026-10-12', true, 0]],
+    'upcoming holidays show ahead of today');
+
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: {} }), /holidays must be an array/, 'holidays must be an array');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ date: '2026-10-10', fill: 0 }] }), /fill must be in \(0, 1\]/, 'fill must be above 0');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ date: '2026-10-10', fill: 1.5 }] }), /fill must be in \(0, 1\]/, 'fill at most 1');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ date: '2026-13-01' }] }), /bad date/, 'holiday dates are validated');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ from: '2026-10-10', to: '2026-10-08' }] }), /to .* before from/, 'a range can\'t end before it starts');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ from: '2026-10-08', to: '2026-10-10' }, { date: '2026-10-09', fill: 0.5 }] }), /two holidays on 2026-10-09/, 'overlapping holidays are refused');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ fill: 1 }] }), /\{date, fill\} or \{from, to, fill\}/, 'an entry needs a date or a range');
+  eq(GOS.normalizeSettings({ schema: [A] }).holidays, [], 'no holidays by default');
+
+  const settings = { schema: [Object.assign({ label: 'writing' }, A)], height: 4, today: '2026-10-10', lookahead: 0, legend: true, holidays: [{ date: '2026-10-10', fill: 1 }] };
+  const html = GOS.renderHTML(GOS.layout(settings, [{ date: '2026-10-10', type: 'a', count: 1 }], 1), settings);
+  eq(count(html, 'class="gos-cell is-holiday"'), 3, 'holiday cells: their own class, no inline color (the CSS paints the rainbow)');
+  eq(count(html, 'is-lit'), 1, 'holiday cells are not lit (earned) cells');
+  ok(html.includes('title="Oct 10 — writing 1 · holiday 3"'), 'the counts tooltip mentions the holiday squares');
+  ok(html.includes('class="gos-swatch is-holiday"'), 'the legend gets a holiday key when there are holidays');
+  const noHolidays = GOS.renderHTML(GOS.layout(Object.assign({}, settings, { holidays: [] }), [], 1), Object.assign({}, settings, { holidays: [] }));
+  ok(!noHolidays.includes('is-holiday'), '…and none without');
+  const css = require('fs').readFileSync(require('path').join(__dirname, '../../lib/ui/grid-of-squares/grid-of-squares.css'), 'utf8');
+  ok(/--gos-holiday:\s*linear-gradient/.test(css) && /\.gos-cell\.is-holiday[^{]*\{[^}]*var\(--gos-holiday\)/.test(css), 'the CSS paints holiday cells with --gos-holiday, a gradient per square');
+});
+
 // ---- render -----------------------------------------------------------------
 
 describe('render', () => {
