@@ -324,6 +324,7 @@ describe('holidays', () => {
     [['2026-10-09', 'a', 3], ['2026-10-10', 'a', 2]], 3);
   eq(withHolidays(v.cols[1]), 'aaa*******', 'a 100% holiday fills the column: real squares first, holiday squares on top');
   eq(withHolidays(v.cols[2]), 'aa***', 'a 50% holiday fills to half the height, real squares counting toward it');
+  ok(v.cols[2].cells.filter((c) => !c.holiday).every((c) => !c.bonus), '…its real squares keep their colors (bonus only on a full holiday)');
   eq(withHolidays(v.cols[0]), '', 'other days are untouched');
   eq(v.cols[1].counts, { a: 3 }, 'counts are real squares only…');
   eq(v.cols[1].cells.slice(0, 3).map((c) => c.bonus), [true, true, true], 'real squares on a holiday are bonus squares (drawn as a rainbow)');
@@ -333,7 +334,12 @@ describe('holidays', () => {
 
   const busy = vm({ height: 10, holidays: [{ date: '2026-10-10', fill: 0.5 }] }, [['2026-10-10', 'a', 7]], 1);
   eq(withHolidays(busy.cols[0]), 'aaaaaaa', 'real squares past the holiday\'s share: no holiday squares, nothing hidden');
-  ok(busy.cols[0].cells.every((c) => c.bonus), '…and every real square that day is still a bonus square');
+  const busyFull = vm({ height: 10, holidays: [{ date: '2026-10-10' }] }, [['2026-10-10', 'a', 12]], 1);
+  ok(busyFull.cols[0].cells.length === 10 && busyFull.cols[0].cells.every((c) => c.bonus), 'a full holiday\'s real squares are all bonus squares, even a full column of them');
+  const forced = vm({ height: 10, holidays: [{ date: '2026-10-09', fill: 0.5, bonus: true }, { date: '2026-10-10', fill: 1, bonus: false }] },
+    [['2026-10-09', 'a', 2], ['2026-10-10', 'a', 2]], 2);
+  ok(forced.cols[0].cells.filter((c) => !c.holiday).every((c) => c.bonus) && forced.cols[1].cells.every((c) => !c.bonus), '`bonus` overrides the default either way');
+  throws(() => GOS.normalizeSettings({ schema: [A], holidays: [{ date: '2026-10-10', bonus: 'yes' }] }), /bonus must be true or false/, 'bonus must be a boolean');
   const plainDay = vm({ height: 4, holidays: [{ date: '2026-10-09' }] }, [['2026-10-10', 'a', 2]], 1);
   ok(plainDay.cols[0].cells.every((c) => !c.bonus), 'squares on other days are not bonus squares');
 

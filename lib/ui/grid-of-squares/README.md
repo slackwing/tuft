@@ -57,7 +57,7 @@ settings)`, `heightOn(settings, date)`, `resolveColor`, `PALETTE`,
 | `todayMarker` | `true` | A triangle + "TODAY" under today's column |
 | `legend` | `false` | A swatch + label per type, in rank order |
 | `tooltip` | `'counts'` | Each column's `title`: `'counts'` (date + counts per type), `'date'`, or `'none'` |
-| `holidays` | `[]` | `[{date, fill = 1}]` or `[{from, to, fill = 1}]` (inclusive) — below |
+| `holidays` | `[]` | `[{date, fill = 1, bonus}]` or `[{from, to, fill = 1, bonus}]` (inclusive) — below |
 
 **Colors** are palette words — `green yellow orange red pink purple blue
 brown gray black white empty` — or `#rgb`, `#rrggbb`, `rgb()`, `rgba()`.
@@ -84,9 +84,10 @@ still spill into view.
 **Holidays** forgive a day. With `fill` (0 < fill ≤ 1), the day counts as
 filled up to `round(fill × its height)` squares: whatever its real squares
 (its own and any bulldozed in) don't reach, holiday squares make up — a
-darker grey than empty, stacked on top of the real ones. The real squares
-of a holiday are a bonus: each is drawn as a rainbow (their types stay in
-`counts` and the tooltip). A day that earns its share anyway gets no
+darker grey than empty, stacked on top of the real ones. On a full
+holiday (`fill: 1`) the real squares are a bonus: each is drawn as a
+rainbow (their types stay in `counts` and the tooltip); on a partial one
+they keep their colors. `bonus: true | false` overrides that per holiday. A day that earns its share anyway gets no
 holiday squares. Holiday squares are drawn after the overflow simulation:
 they never push real squares out, never carry into the next day, and don't
 appear in `counts` (a column's `holiday` has their number; `isHoliday`
