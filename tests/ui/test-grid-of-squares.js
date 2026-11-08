@@ -326,10 +326,16 @@ describe('holidays', () => {
   eq(withHolidays(v.cols[2]), 'aa***', 'a 50% holiday fills to half the height, real squares counting toward it');
   eq(withHolidays(v.cols[0]), '', 'other days are untouched');
   eq(v.cols[1].counts, { a: 3 }, 'counts are real squares only…');
+  eq(v.cols[1].cells.slice(0, 3).map((c) => c.bonus), [true, true, true], 'real squares on a holiday are bonus squares (drawn as a rainbow)');
+  eq(v.cols[0].cells.length, 0, '(no squares on the plain day before)');
+  ok([v.cols[1].isHoliday, v.cols[2].isHoliday, v.cols[0].isHoliday].join() === 'true,true,false', 'columns know whether their day is a holiday');
   eq([v.cols[0].holiday, v.cols[1].holiday, v.cols[2].holiday], [0, 7, 3], '…the holiday squares are counted apart');
 
   const busy = vm({ height: 10, holidays: [{ date: '2026-10-10', fill: 0.5 }] }, [['2026-10-10', 'a', 7]], 1);
   eq(withHolidays(busy.cols[0]), 'aaaaaaa', 'real squares past the holiday\'s share: no holiday squares, nothing hidden');
+  ok(busy.cols[0].cells.every((c) => c.bonus), '…and every real square that day is still a bonus square');
+  const plainDay = vm({ height: 4, holidays: [{ date: '2026-10-09' }] }, [['2026-10-10', 'a', 2]], 1);
+  ok(plainDay.cols[0].cells.every((c) => !c.bonus), 'squares on other days are not bonus squares');
 
   // height 4: day 1 earns 6, keeps 4, carries 2 into day 2 (a holiday) —
   // the carried squares are real there; the holiday fills the rest and
@@ -337,6 +343,7 @@ describe('holidays', () => {
   const carried = vm({ height: 4, today: '2026-10-03', holidays: [{ date: '2026-10-02', fill: 1 }] },
     [['2026-10-01', 'a', 6]], 3);
   eq(carried.cols.map(withHolidays), ['aaaa', 'aa**', ''], 'squares bulldozed into a holiday count as real; holiday squares never bulldoze');
+  ok(carried.cols[1].cells.slice(0, 2).every((c) => c.bonus && c.carried) && carried.cols[0].cells.every((c) => !c.bonus), 'squares carried into a holiday are bonus squares there');
   const over = vm({ height: 4, today: '2026-10-03', holidays: [{ date: '2026-10-02', fill: 1 }] },
     [['2026-10-01', 'a', 6], ['2026-10-02', 'a', 3]], 3);
   eq(over.cols.map(withHolidays), ['aaaa', 'aaaa', 'a'], 'a holiday doesn\'t change how real squares overflow');
@@ -365,14 +372,16 @@ describe('holidays', () => {
 
   const settings = { schema: [Object.assign({ label: 'writing' }, A)], height: 4, today: '2026-10-10', lookahead: 0, legend: true, holidays: [{ date: '2026-10-10', fill: 1 }] };
   const html = GOS.renderHTML(GOS.layout(settings, [{ date: '2026-10-10', type: 'a', count: 1 }], 1), settings);
-  eq(count(html, 'class="gos-cell is-holiday"'), 3, 'holiday cells: their own class, no inline color (the CSS paints the rainbow)');
+  eq(count(html, 'class="gos-cell is-holiday"'), 3, 'holiday cells: their own class, no inline color (the CSS paints them)');
   eq(count(html, 'is-lit'), 1, 'holiday cells are not lit (earned) cells');
+  ok(html.includes('class="gos-cell is-lit is-bonus" data-type="a"></div>'), 'a real square on a holiday: lit, bonus, its type kept, no inline color (the CSS paints the rainbow)');
   ok(html.includes('title="Oct 10 — writing 1 · holiday 3"'), 'the counts tooltip mentions the holiday squares');
   ok(html.includes('class="gos-swatch is-holiday"'), 'the legend gets a holiday key when there are holidays');
   const noHolidays = GOS.renderHTML(GOS.layout(Object.assign({}, settings, { holidays: [] }), [], 1), Object.assign({}, settings, { holidays: [] }));
   ok(!noHolidays.includes('is-holiday'), '…and none without');
   const css = require('fs').readFileSync(require('path').join(__dirname, '../../lib/ui/grid-of-squares/grid-of-squares.css'), 'utf8');
-  ok(/--gos-holiday:\s*linear-gradient/.test(css) && /\.gos-cell\.is-holiday[^{]*\{[^}]*var\(--gos-holiday\)/.test(css), 'the CSS paints holiday cells with --gos-holiday, a gradient per square');
+  ok(/--gos-bonus:\s*linear-gradient/.test(css) && /\.gos-cell\.is-bonus[^{]*\{[^}]*var\(--gos-bonus\)/.test(css), 'the CSS paints bonus squares with --gos-bonus, a gradient per square');
+  ok(/--gos-holiday:\s*rgba?\(/.test(css) && /\.gos-cell\.is-holiday[^{]*\{[^}]*var\(--gos-holiday\)/.test(css), '…and holiday fill with --gos-holiday, a darker grey than empty');
 });
 
 // ---- render -----------------------------------------------------------------

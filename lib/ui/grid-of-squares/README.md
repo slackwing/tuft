@@ -4,7 +4,8 @@ A GitHub-contribution-style grid: one column per day, squares stacked
 bottom-up, today about 80% of the way across, as many columns as fit the
 container. Squares have **types** (color, rank, whether they bulldoze);
 what doesn't fit a day's column is hidden or shoved into the next day.
-**Holidays** top chosen days up with rainbow squares.
+**Holidays** top chosen days up, and turn what you earned on them into
+rainbow bonus squares.
 
 ```html
 <link rel="stylesheet" href="grid-of-squares.css">
@@ -82,12 +83,15 @@ still spill into view.
 
 **Holidays** forgive a day. With `fill` (0 < fill ≤ 1), the day counts as
 filled up to `round(fill × its height)` squares: whatever its real squares
-(its own and any bulldozed in) don't reach, holiday squares make up — each
-one a rainbow, stacked on top of the real ones. A day that earns its share
-anyway gets none. Holiday squares are drawn after the overflow simulation:
+(its own and any bulldozed in) don't reach, holiday squares make up — a
+darker grey than empty, stacked on top of the real ones. The real squares
+of a holiday are a bonus: each is drawn as a rainbow (their types stay in
+`counts` and the tooltip). A day that earns its share anyway gets no
+holiday squares. Holiday squares are drawn after the overflow simulation:
 they never push real squares out, never carry into the next day, and don't
-appear in `counts` (a column's `holiday` has their number). Upcoming
-holidays show ahead of today; days before `start` get none.
+appear in `counts` (a column's `holiday` has their number; `isHoliday`
+marks the day). Upcoming holidays show ahead of today; days before `start`
+get none.
 
 ```js
 holidays: [
@@ -101,9 +105,10 @@ holidays: [
 
 Everything is under `.gos`. Override the custom properties to theme it:
 `--gos-cell`, `--gos-gap`, `--gos-radius`, `--gos-empty`,
-`--gos-light-edge`, `--gos-ink`, `--gos-muted`, `--gos-holiday` (any CSS
-background; a spectrum gradient by default). Hooks: `.gos-col.is-today`,
+`--gos-light-edge`, `--gos-ink`, `--gos-muted`, `--gos-holiday` (holiday
+squares; a darker grey), `--gos-bonus` (real squares on a holiday; any CSS
+background — a spectrum gradient by default). Hooks: `.gos-col.is-today`,
 `.is-future`, `.gos-cell.is-lit`, `.is-carried`, `.is-light`, `.is-holiday`,
-`[data-type="…"]`. Each column's `title` follows the `tooltip` setting.
+`.is-bonus`, `[data-type="…"]`. Each column's `title` follows the `tooltip` setting.
 
 Tests: `node tests/ui/test-grid-of-squares.js`.
